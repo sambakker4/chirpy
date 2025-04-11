@@ -3,11 +3,23 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 )
 
+type apiConfig struct {
+	fileserverHits atomic.Int32
+}
+
 func (cfg *apiConfig) getFileserverHits(writer http.ResponseWriter, req *http.Request) {
-	hits := fmt.Sprintf("Hits: %v", cfg.fileserverHits.Load())
-	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	hits := fmt.Sprintf(
+		`<html>
+  <body>
+    <h1>Welcome, Chirpy Admin</h1>
+    <p>Chirpy has been visited %d times!</p>
+  </body>
+</html>`,
+		cfg.fileserverHits.Load())
+	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	writer.WriteHeader(200)
 	writer.Write([]byte(hits))
 }
