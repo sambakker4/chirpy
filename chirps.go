@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
+	"slices"
 )
 
 func validateChirp(writer http.ResponseWriter, req *http.Request) {
@@ -12,12 +14,8 @@ func validateChirp(writer http.ResponseWriter, req *http.Request) {
 		Body string `json:"body"`
 	}
 
-	type returnError struct {
-		Error string `json:"error"`
-	}
-
 	type returnVals struct {
-		Valid bool `json:"valid"`
+		CleanedBody string`json:"cleaned_body"`
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
@@ -33,15 +31,28 @@ func validateChirp(writer http.ResponseWriter, req *http.Request) {
 
 	}
 
-	if len(params.Body) > 140 {
-		writer.WriteHeader(400)
-		resp, _ := json.Marshal(returnError{Error: "Chirp is too long"})
-		writer.WriteHeader(400)
-		writer.Write(resp)
+	message := params.Body
+
+	if len(message) > 140 {
+		ResponseWithError(writer, 400, "Chirp is too long")
 		return
 	}
-	
-	resp, _ := json.Marshal(returnVals{Valid: true})
-	writer.WriteHeader(200)
-	writer.Write(resp)
+	message = removeBadWords(message)
+	ResponseWithJson(writer, 200, returnVals{CleanedBody: message})
+}
+
+func removeBadWords(str string) string {
+	badWords := []string{
+		"kerfuffle",
+		"sharbert",
+		"fornax",
+	}
+	words := strings.Split(str, " ")
+
+	for i, word := range words {
+		if idx := slices.Index(badWords, strings.ToLower(word)); idx != -1 {
+			words[i] = "****"
+		}
+	}
+	return strings.Join(words, " ")
 }

@@ -2,12 +2,17 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync/atomic"
+
+	"github.com/sambakker4/chirpy/internal/database"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	db             *database.Queries
+	platform       string
 }
 
 func (cfg *apiConfig) getFileserverHits(writer http.ResponseWriter, req *http.Request) {
@@ -24,8 +29,14 @@ func (cfg *apiConfig) getFileserverHits(writer http.ResponseWriter, req *http.Re
 	writer.Write([]byte(hits))
 }
 
-func (cfg *apiConfig) resetFileserverHits(writer http.ResponseWriter, req *http.Request) {
+func (cfg *apiConfig) resetFileserver(writer http.ResponseWriter, req *http.Request) {
+	err := cfg.db.ResetUsers(req.Context())
+	if err != nil {
+		log.Printf("Error reseting database: %v", err)
+	}
+
 	cfg.fileserverHits.Store(0)
+
 	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	writer.WriteHeader(200)
 	writer.Write([]byte("Reset Successful"))
