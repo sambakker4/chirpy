@@ -2,31 +2,38 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
-	"strings"
 	"slices"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/sambakker4/chirpy/internal/database"
 )
 
-func validateChirp(writer http.ResponseWriter, req *http.Request) {
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (cfg apiConfig) CreateChirp(writer http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	type parameters struct {
-		Body string `json:"body"`
-	}
-
-	type returnVals struct {
-		CleanedBody string`json:"cleaned_body"`
+		Body   string    `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
-		
+
 	decoder := json.NewDecoder(req.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
 
 	if err != nil {
-		log.Printf("Error decoding json: %s", err)
-		writer.WriteHeader(500)
+		ResponseWithError(writer, 500, "Error decoding json")
 		return
 
 	}
@@ -38,7 +45,26 @@ func validateChirp(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 	message = removeBadWords(message)
-	ResponseWithJson(writer, 200, returnVals{CleanedBody: message})
+
+	dbChirp, err := cfg.db.CreateChirp(req.Context(), database.CreateChirpParams{
+		Body:   message,
+		UserID: params.UserID,
+	})
+
+	if err != nil {
+		ResponseWithError(writer, 500, "Error retrieving data from database")
+		return
+	}
+
+	chirp := Chirp{
+		ID:        dbChirp.ID,
+		CreatedAt: dbChirp.CreatedAt,
+		UpdatedAt: dbChirp.UpdatedAt,
+		Body:      dbChirp.Body,
+		UserID:    dbChirp.UserID,
+	}
+
+	ResponseWithJson(writer, 201, chirp)
 }
 
 func removeBadWords(str string) string {

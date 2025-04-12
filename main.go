@@ -41,7 +41,7 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /admin/metrics", config.getFileserverHits)
 	mux.HandleFunc("POST /admin/reset", config.resetFileserver)
-	mux.HandleFunc("POST /api/validate_chirp", validateChirp)
+	mux.HandleFunc("POST /api/chirps", config.CreateChirp)
 	mux.HandleFunc("POST /api/users", config.CreateUser)
 
 	server := &http.Server{
