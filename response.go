@@ -16,7 +16,11 @@ func ResponseWithError(writer http.ResponseWriter, code int, msg string) {
 }
 
 func ResponseWithJson(writer http.ResponseWriter, code int, payload interface{}) {
-	resp, _ := json.Marshal(payload)
+	resp, err := json.Marshal(payload)
+	if err != nil {
+		ResponseWithError(writer, 500, "Error marshaling return data")
+		return
+	}
 	writer.WriteHeader(code)
 	writer.Write(resp)
 }

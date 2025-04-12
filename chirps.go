@@ -82,3 +82,49 @@ func removeBadWords(str string) string {
 	}
 	return strings.Join(words, " ")
 }
+
+func (cfg apiConfig) GetAllChirps(writer http.ResponseWriter, req *http.Request) {
+	dbChirps, err := cfg.db.GetAllChirps(req.Context())	
+	if err != nil {
+		ResponseWithError(writer, 500, "Error retrieving all chirps from database")
+		return
+	}
+	
+	chirps := make([]Chirp, 0)
+
+	for _, chirp := range dbChirps {
+		chirps = append(chirps, Chirp{
+			ID: chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body: chirp.Body,
+			UserID: chirp.UserID,
+		})
+	}
+	ResponseWithJson(writer, 200, chirps)
+}
+
+func (cfg apiConfig) GetChirp(writer http.ResponseWriter, req *http.Request) {
+	chirpIDstring := req.PathValue("chirpID")
+	chirpID, err := uuid.Parse(chirpIDstring)	
+	if err != nil {
+		ResponseWithError(writer, 500, "Error parsing chirp id")
+		return 
+	}
+
+	dbChirp, err := cfg.db.GetChirp(req.Context(), chirpID) 
+	if err != nil {
+		ResponseWithError(writer, 404, "chirp not found")
+		return
+	}
+
+	chirp := Chirp{
+		ID: dbChirp.ID,
+		CreatedAt: dbChirp.CreatedAt,
+		UpdatedAt: dbChirp.UpdatedAt,
+		Body: dbChirp.Body,
+		UserID: dbChirp.UserID,
+	}	
+
+	ResponseWithJson(writer, 200, chirp)
+}

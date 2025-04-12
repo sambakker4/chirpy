@@ -43,6 +43,8 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", config.resetFileserver)
 	mux.HandleFunc("POST /api/chirps", config.CreateChirp)
 	mux.HandleFunc("POST /api/users", config.CreateUser)
+	mux.HandleFunc("GET /api/chirps", config.GetAllChirps)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", config.GetChirp)
 
 	server := &http.Server{
 		Handler: mux,
