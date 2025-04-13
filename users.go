@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sambakker4/chirpy/internal/database"
+	"github.com/sambakker4/chirpy/internal/auth"
 )
 
 type User struct {
@@ -25,7 +27,8 @@ func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 
 	type requestVal struct {
-		Email string `json:"email"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -36,13 +39,22 @@ func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
 		ResponseWithError(writer, 400, "error decoding json")
 		return
 	}
-	user, err := cfg.db.CreateUser(req.Context(), sql.NullString{
-		String: val.Email,
-		Valid:  true,
+
+	hashed_password, err := auth.HashPassword(val.Password)
+	if err != nil {
+		ResponseWithError(writer, 500, "error hashing password")
+	}
+
+	user, err := cfg.db.CreateUser(req.Context(), database.CreateUserParams{
+		Email: sql.NullString{
+			String: val.Email,
+			Valid:  true,
+		},
+		HashedPassword: hashed_password,
 	})
 
 	if err != nil {
-		ResponseWithError(writer, 500, err.Error())
+		ResponseWithError(writer, 500, "Error creating user")
 		return
 	}
 
