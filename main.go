@@ -18,11 +18,13 @@ func main() {
 	godotenv.Load()
 	dbUrl := os.Getenv("DB_URL")
 	platform := os.Getenv("PLATFORM")
+	tokenSecret := os.Getenv("TOKEN_SECRET")
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	dbQueries := database.New(db)
 
 	const port = "8080"
@@ -33,6 +35,7 @@ func main() {
 		db: dbQueries,
 		fileserverHits: atomic.Int32{},
 		platform: platform,
+		tokenSecret: tokenSecret,
 	}
 
 	handler := http.FileServer(http.Dir(filePathRoot))

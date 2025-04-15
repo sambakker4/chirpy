@@ -1,8 +1,10 @@
 package auth
 
 import (
-	"time"
 	"errors"
+	"net/http"
+	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -57,4 +59,20 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return userID, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authInfo := headers.Get("Authorization")
+
+	if authInfo == "" {
+		return "", errors.New("No authorization header")
+	}
+
+	bearer, ok := strings.CutPrefix(authInfo, "Bearer ")	
+
+	if !ok {
+		return "", errors.New("Authorization field should be in :Bearer TOKEN, format")
+	}
+
+	return bearer, nil
 }

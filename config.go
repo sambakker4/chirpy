@@ -13,6 +13,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	tokenSecret    string
 }
 
 func (cfg *apiConfig) getFileserverHits(writer http.ResponseWriter, req *http.Request) {

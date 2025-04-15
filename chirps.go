@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sambakker4/chirpy/internal/auth"
 	"github.com/sambakker4/chirpy/internal/database"
 )
 
@@ -21,6 +23,12 @@ type Chirp struct {
 
 func (cfg apiConfig) CreateChirp(writer http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
+	token, err := auth.GetBearerToken(req.Header)
+
+	if err != nil {
+		ResponseWithError(writer, 500, "Token not recieved")
+	}
+
 	type parameters struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -30,12 +38,18 @@ func (cfg apiConfig) CreateChirp(writer http.ResponseWriter, req *http.Request) 
 
 	decoder := json.NewDecoder(req.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 
 	if err != nil {
 		ResponseWithError(writer, 500, "Error decoding json")
 		return
+	}
 
+	id, err := auth.ValidateJWT(token, cfg.tokenSecret)
+
+	if err != nil {
+		ResponseWithError(writer, 400, "Error validating token")
+		return
 	}
 
 	message := params.Body
@@ -44,14 +58,16 @@ func (cfg apiConfig) CreateChirp(writer http.ResponseWriter, req *http.Request) 
 		ResponseWithError(writer, 400, "Chirp is too long")
 		return
 	}
+
 	message = removeBadWords(message)
 
 	dbChirp, err := cfg.db.CreateChirp(req.Context(), database.CreateChirpParams{
 		Body:   message,
-		UserID: params.UserID,
+		UserID: id,
 	})
 
 	if err != nil {
+		fmt.Println(err)
 		ResponseWithError(writer, 500, "Error retrieving data from database")
 		return
 	}
@@ -84,47 +100,51 @@ func removeBadWords(str string) string {
 }
 
 func (cfg apiConfig) GetAllChirps(writer http.ResponseWriter, req *http.Request) {
-	dbChirps, err := cfg.db.GetAllChirps(req.Context())	
+	dbChirps, err := cfg.db.GetAllChirps(req.Context())
+	writer.Header().Set("Content-Type", "application/json")
 	if err != nil {
 		ResponseWithError(writer, 500, "Error retrieving all chirps from database")
 		return
 	}
-	
+
 	chirps := make([]Chirp, 0)
 
 	for _, chirp := range dbChirps {
 		chirps = append(chirps, Chirp{
-			ID: chirp.ID,
+			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
-			Body: chirp.Body,
-			UserID: chirp.UserID,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
 		})
 	}
+
 	ResponseWithJson(writer, 200, chirps)
 }
 
 func (cfg apiConfig) GetChirp(writer http.ResponseWriter, req *http.Request) {
 	chirpIDstring := req.PathValue("chirpID")
-	chirpID, err := uuid.Parse(chirpIDstring)	
+	chirpID, err := uuid.Parse(chirpIDstring)
+	writer.Header().Set("Content-Type", "application/json")
+
 	if err != nil {
 		ResponseWithError(writer, 500, "Error parsing chirp id")
-		return 
+		return
 	}
 
-	dbChirp, err := cfg.db.GetChirp(req.Context(), chirpID) 
+	dbChirp, err := cfg.db.GetChirp(req.Context(), chirpID)
 	if err != nil {
 		ResponseWithError(writer, 404, "chirp not found")
 		return
 	}
 
 	chirp := Chirp{
-		ID: dbChirp.ID,
+		ID:        dbChirp.ID,
 		CreatedAt: dbChirp.CreatedAt,
 		UpdatedAt: dbChirp.UpdatedAt,
-		Body: dbChirp.Body,
-		UserID: dbChirp.UserID,
-	}	
+		Body:      dbChirp.Body,
+		UserID:    dbChirp.UserID,
+	}
 
 	ResponseWithJson(writer, 200, chirp)
 }

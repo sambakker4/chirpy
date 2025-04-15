@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sambakker4/chirpy/internal/database"
 	"github.com/sambakker4/chirpy/internal/auth"
+	"github.com/sambakker4/chirpy/internal/database"
 )
 
 type User struct {
@@ -19,6 +19,7 @@ type User struct {
 }
 
 func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
 	if cfg.platform != "dev" {
 		ResponseWithError(writer, 403, "not authorized")
 		return
@@ -70,7 +71,6 @@ func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
 		ResponseWithError(writer, 500, "")
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(201)
 	writer.Write(respUser)
 }
