@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -48,7 +47,7 @@ func (cfg apiConfig) CreateChirp(writer http.ResponseWriter, req *http.Request) 
 	id, err := auth.ValidateJWT(token, cfg.tokenSecret)
 
 	if err != nil {
-		ResponseWithError(writer, 400, "Error validating token")
+		ResponseWithError(writer, 401, "Error validating token")
 		return
 	}
 
@@ -67,7 +66,6 @@ func (cfg apiConfig) CreateChirp(writer http.ResponseWriter, req *http.Request) 
 	})
 
 	if err != nil {
-		fmt.Println(err)
 		ResponseWithError(writer, 500, "Error retrieving data from database")
 		return
 	}
