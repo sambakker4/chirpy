@@ -69,8 +69,56 @@ func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
 	respUser, err := json.Marshal(newUser)
 	if err != nil {
 		ResponseWithError(writer, 500, "")
+		return
 	}
 
 	writer.WriteHeader(201)
 	writer.Write(respUser)
+}
+
+func (cfg apiConfig) UpdateUser(writer http.ResponseWriter, req *http.Request) {
+	token, err := auth.GetBearerToken(req.Header) 		
+	if err != nil {
+		ResponseWithError(writer, 401, "Error accessing token from header")
+		return
+	}
+
+	defer req.Body.Close()
+	
+	var loginInfo LoginInfo
+	decoder := json.NewDecoder(req.Body)
+	err = decoder.Decode(&loginInfo)
+
+	if err != nil {
+		ResponseWithError(writer, 400, "Error decoding json")
+		return
+	}
+	
+	userID, err := auth.ValidateJWT(token, cfg.tokenSecret)
+	if err != nil {
+		ResponseWithError(writer, 401, "Invalid access token")
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(loginInfo.Password)
+	if err != nil {
+		ResponseWithError(writer, 400, "Error hashing password")
+		return
+	}
+
+	user, err := cfg.db.UpdateUserInfo(req.Context(), database.UpdateUserInfoParams{
+		Email: sql.NullString{
+			Valid: true,
+			String: loginInfo.Email,
+		},
+		HashedPassword: hashedPassword,
+		ID: userID,
+	})
+
+
+	
+	ResponseWithJson(writer, 200, LoginUser{
+		ID: user.ID,
+		Email: user.Email.String,
+	})
 }

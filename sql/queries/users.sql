@@ -23,3 +23,9 @@ WHERE id = (
     FROM refresh_tokens
     WHERE token = $1
 );
+
+-- name: UpdateUserInfo :one
+UPDATE users
+SET email = $2, hashed_password = $3
+WHERE id = $1
+RETURNING *;

@@ -44,10 +44,14 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /admin/metrics", config.getFileserverHits)
 	mux.HandleFunc("POST /admin/reset", config.resetFileserver)
-	mux.HandleFunc("POST /api/chirps", config.CreateChirp)
+
 	mux.HandleFunc("POST /api/users", config.CreateUser)
+	mux.HandleFunc("PUT /api/users", config.UpdateUser)
+
 	mux.HandleFunc("GET /api/chirps", config.GetAllChirps)
+	mux.HandleFunc("POST /api/chirps", config.CreateChirp)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", config.GetChirp)
+
 	mux.HandleFunc("POST /api/login", config.Login)
 	mux.HandleFunc("POST /api/refresh", config.Refresh)
 	mux.HandleFunc("POST /api/revoke", config.RevokeToken)
