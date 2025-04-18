@@ -14,6 +14,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	tokenSecret    string
+	apiKey         string
 }
 
 func (cfg *apiConfig) getFileserverHits(writer http.ResponseWriter, req *http.Request) {

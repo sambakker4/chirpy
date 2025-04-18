@@ -12,10 +12,11 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
 }
 
 func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
@@ -60,10 +61,11 @@ func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	newUser := User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email.String,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email.String,
+		IsChirpyRed: user.IsChirpyRed.Bool,
 	}
 
 	respUser, err := json.Marshal(newUser)
@@ -77,14 +79,14 @@ func (cfg apiConfig) CreateUser(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (cfg apiConfig) UpdateUser(writer http.ResponseWriter, req *http.Request) {
-	token, err := auth.GetBearerToken(req.Header) 		
+	token, err := auth.GetBearerToken(req.Header)
 	if err != nil {
 		ResponseWithError(writer, 401, "Error accessing token from header")
 		return
 	}
 
 	defer req.Body.Close()
-	
+
 	var loginInfo LoginInfo
 	decoder := json.NewDecoder(req.Body)
 	err = decoder.Decode(&loginInfo)
@@ -93,7 +95,7 @@ func (cfg apiConfig) UpdateUser(writer http.ResponseWriter, req *http.Request) {
 		ResponseWithError(writer, 400, "Error decoding json")
 		return
 	}
-	
+
 	userID, err := auth.ValidateJWT(token, cfg.tokenSecret)
 	if err != nil {
 		ResponseWithError(writer, 401, "Invalid access token")
@@ -108,17 +110,16 @@ func (cfg apiConfig) UpdateUser(writer http.ResponseWriter, req *http.Request) {
 
 	user, err := cfg.db.UpdateUserInfo(req.Context(), database.UpdateUserInfoParams{
 		Email: sql.NullString{
-			Valid: true,
+			Valid:  true,
 			String: loginInfo.Email,
 		},
 		HashedPassword: hashedPassword,
-		ID: userID,
+		ID:             userID,
 	})
 
-
-	
 	ResponseWithJson(writer, 200, LoginUser{
-		ID: user.ID,
-		Email: user.Email.String,
+		ID:          user.ID,
+		Email:       user.Email.String,
+		IsChirpyRed: user.IsChirpyRed.Bool,
 	})
 }

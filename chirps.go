@@ -146,3 +146,47 @@ func (cfg apiConfig) GetChirp(writer http.ResponseWriter, req *http.Request) {
 
 	ResponseWithJson(writer, 200, chirp)
 }
+
+func (cfg apiConfig) DeleteChirp(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	chirpIDstring := req.PathValue("chirpID")
+	chirpID, err := uuid.Parse(chirpIDstring)
+
+	if err != nil {
+		ResponseWithError(writer, 500, "Error parsing chirp id")
+		return
+	}
+
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		ResponseWithError(writer, 401, "Error retrieving token from header")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.tokenSecret)
+	if err != nil {
+		ResponseWithError(writer, 500, "Error validating access token")
+		return
+	}
+
+	chirp, err := cfg.db.GetChirp(req.Context(), chirpID)
+	if err != nil {
+		ResponseWithError(writer, 404, "Chirp not found")
+		return
+	}
+
+	if chirp.UserID != userID {
+		ResponseWithError(writer, 403, "Not authorized")
+		return
+	}
+	
+	err = cfg.db.DeleteChirp(req.Context(), chirpID)
+	if err != nil {
+		ResponseWithError(writer, 400, "Error deleting chirp")
+		return
+	}
+	
+	writer.WriteHeader(204)
+	writer.Write([]byte(""))
+}

@@ -19,6 +19,7 @@ func main() {
 	dbUrl := os.Getenv("DB_URL")
 	platform := os.Getenv("PLATFORM")
 	tokenSecret := os.Getenv("TOKEN_SECRET")
+	apiKey := os.Getenv("POLKA_KEY")
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
@@ -36,6 +37,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		platform: platform,
 		tokenSecret: tokenSecret,
+		apiKey: apiKey,
 	}
 
 	handler := http.FileServer(http.Dir(filePathRoot))
@@ -51,10 +53,13 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", config.GetAllChirps)
 	mux.HandleFunc("POST /api/chirps", config.CreateChirp)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", config.GetChirp)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", config.DeleteChirp)
 
 	mux.HandleFunc("POST /api/login", config.Login)
 	mux.HandleFunc("POST /api/refresh", config.Refresh)
 	mux.HandleFunc("POST /api/revoke", config.RevokeToken)
+
+	mux.HandleFunc("POST /api/polka/webhooks", config.HandleWebHook)
 
 	server := &http.Server{
 		Handler: mux,
