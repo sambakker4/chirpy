@@ -71,7 +71,7 @@ func GetBearerToken(headers http.Header) (string, error) {
 	bearer, ok := strings.CutPrefix(authInfo, "Bearer ")	
 
 	if !ok {
-		return "", errors.New("Authorization field should be in :Bearer TOKEN, format")
+		return "", errors.New("Authorization field should be in :Bearer <TOKEN>, format")
 	}
 
 	return bearer, nil

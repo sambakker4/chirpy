@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"sort"
 
 	"github.com/google/uuid"
 	"github.com/sambakker4/chirpy/internal/auth"
@@ -98,23 +99,57 @@ func removeBadWords(str string) string {
 }
 
 func (cfg apiConfig) GetAllChirps(writer http.ResponseWriter, req *http.Request) {
-	dbChirps, err := cfg.db.GetAllChirps(req.Context())
-	writer.Header().Set("Content-Type", "application/json")
-	if err != nil {
-		ResponseWithError(writer, 500, "Error retrieving all chirps from database")
-		return
-	}
-
 	chirps := make([]Chirp, 0)
+	writer.Header().Set("Content-Type", "application/json")
 
-	for _, chirp := range dbChirps {
-		chirps = append(chirps, Chirp{
-			ID:        chirp.ID,
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
-			Body:      chirp.Body,
-			UserID:    chirp.UserID,
-		})
+
+	authorID := req.URL.Query().Get("author_id") 
+	sortingOrder := req.URL.Query().Get("sort")
+	if authorID != "" {
+		id, err := uuid.Parse(authorID)
+		if err != nil {
+			ResponseWithError(writer, 400, "Error parsing id from query parameter")
+			return
+		}
+
+		dbChirps, err := cfg.db.GetChirpsForUser(req.Context(), id)
+		if err != nil {
+			ResponseWithError(writer, 500, "Error retrieving all chirps from database")
+			return
+		}
+
+		for _, chirp := range dbChirps {
+			chirps = append(chirps, Chirp{
+				ID:        chirp.ID,
+				CreatedAt: chirp.CreatedAt,
+				UpdatedAt: chirp.UpdatedAt,
+				Body:      chirp.Body,
+				UserID:    chirp.UserID,
+			})
+		}
+
+	} else {
+		dbChirps, err := cfg.db.GetAllChirps(req.Context())
+		if err != nil {
+			ResponseWithError(writer, 500, "Error retrieving all chirps from database")
+			return
+		}
+
+		for _, chirp := range dbChirps {
+			chirps = append(chirps, Chirp{
+				ID:        chirp.ID,
+				CreatedAt: chirp.CreatedAt,
+				UpdatedAt: chirp.UpdatedAt,
+				Body:      chirp.Body,
+				UserID:    chirp.UserID,
+			})
+		}
+	}
+	if sortingOrder == "desc" {
+		sort.Slice(chirps, func(i, j int) bool{return chirps[i].CreatedAt.After(chirps[j].CreatedAt)})
+	} else if !(sortingOrder == "" || sortingOrder == "asc") {
+		ResponseWithError(writer, 400, "sorting order must be 'asc' or 'desc'")
+		return
 	}
 
 	ResponseWithJson(writer, 200, chirps)
@@ -132,6 +167,7 @@ func (cfg apiConfig) GetChirp(writer http.ResponseWriter, req *http.Request) {
 
 	dbChirp, err := cfg.db.GetChirp(req.Context(), chirpID)
 	if err != nil {
+		fmt.Println(err)
 		ResponseWithError(writer, 404, "chirp not found")
 		return
 	}
